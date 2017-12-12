@@ -1,0 +1,10 @@
+[main]
+#
+# The URL of the privacyIDEA server.
+URL = "https://10.0.0.70"
+# In productive use, you should set SSLVERIFY to True
+SSLVERIFY=False
+CACERTS=None
+# If the users are not to be validated against the default realm,
+# you may specify a destinct realm
+REALM=None

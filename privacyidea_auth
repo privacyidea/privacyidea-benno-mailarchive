@@ -1,0 +1,85 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+#
+# 2017-12-05 Cornelius Kölbel, <cornelius.koelbel@netknights.it>
+#            Initial creation
+#
+# (c) Cornelius Kölbel
+# Info: http://www.privacyidea.org
+#
+# This code is free software; you can redistribute it and/or
+# modify it under the terms of the GNU AFFERO GENERAL PUBLIC LICENSE
+# License as published by the Free Software Foundation; either
+# version 3 of the License, or any later version.
+#
+# This code is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU AFFERO GENERAL PUBLIC LICENSE for more details.
+#
+# You should have received a copy of the GNU Affero General Public
+# License along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#
+__doc__ = """This is an authentication module for the benno mailarchive
+http://www.benno-mailarchive.de
+"""
+import configobj
+import requests
+import syslog
+import sys
+import fileinput
+import urllib3
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+
+RESPONSE = u"""ROLE {role}
+DISPLAYNAME {displayname}
+MAIL {mail}
+ARCHIVE BennoContainer
+AUTH OK"""
+
+# Read config
+conf = configobj.ConfigObj("./benno.ini", unrepr=True).get("main") or {}
+
+if not conf.get("URL"):
+    conf = configobj.ConfigObj("/etc/privacyidea/benno.ini", unrepr=True).get("main") or {}
+    if not conf.get("URL"):
+        print("No config file found. Searching for ./benno.ini or /etc/privacyidea/benno.ini")
+        print(conf)
+        sys.exit(1)
+
+input = ""
+for line in fileinput.input():
+    input += line
+
+username, password = input.split()
+
+data = {"user": username,
+        "pass": password}
+if conf.get("REALM"):
+    data["realm"] = conf.get("REALM")
+
+response = requests.post(conf.get("URL") + "/validate/check", data=data,
+                         verify=conf.get("SSLVERIFY"))
+json_response = response.json
+if callable(json_response):
+    syslog.syslog(syslog.LOG_DEBUG, "requests > 1.0")
+    json_response = json_response()
+
+result = json_response.get("result")
+detail = json_response.get("detail") or {}
+if not result.get("value"):
+    syslog.syslog(syslog.LOG_INFO, "Failed authentication")
+    print("ERROR ERR_AUTH")
+    sys.exit(0)
+else:
+    # successful authentication
+    syslog.syslog(syslog.LOG_INFO, "Authentication successful")
+    user = detail.get("user")
+    syslog.syslog(syslog.LOG_INFO, "user received")
+    out = RESPONSE.format(role="USER",
+                          mail=user.get("email"),
+                          displayname=u"{0} {1}".format(user.get("givenname"),
+                                                       user.get("surname")))
+    print(out.encode("utf8"))
+    sys.exit(0)
+
