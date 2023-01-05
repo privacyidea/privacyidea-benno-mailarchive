@@ -1,6 +1,8 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 #
+# 2023-01-05 Cornelius Kölbel <cornelius.koelbel@netknights.it>
+#            Support Python 3
 # 2017-12-05 Cornelius Kölbel, <cornelius.koelbel@netknights.it>
 #            Initial creation
 #
@@ -80,6 +82,6 @@ else:
                           mail=user.get("email"),
                           displayname=u"{0} {1}".format(user.get("givenname"),
                                                        user.get("surname")))
-    print(out.encode("utf8"))
+    print(out)
     sys.exit(0)
 
